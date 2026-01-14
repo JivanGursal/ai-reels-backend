@@ -1,0 +1,13 @@
+# Environment variables
+.env
+backend/.env
+
+# Generated media (never push)
+backend/output/
+
+# Python
+__pycache__/
+*.pyc
+
+# Docker
+*.log
