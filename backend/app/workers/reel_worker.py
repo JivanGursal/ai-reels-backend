@@ -1,19 +1,23 @@
 import os
 from app.services.script_service import generate_script
 from app.services.visual_service import generate_visuals
-from app.services.voice_service import generate_voice
+from app.services.voice_service import generate_voice_sync
 from app.services.subtitle_service import generate_subtitles
 from app.services.video_service import generate_video
 from app.core.config import settings
-from app.utils.files import ensure_dirs, unique_filename
+from app.utils.files import ensure_dirs
+from app.utils.job_manager import update_job
 
 
-async def process_reel(job_id: str, idea: str, seconds: int):
+def run_reel_job(job_path: str, idea: str, seconds: int):
     """
-    BACKGROUND WORKER
-    ⚠️ Ye function HTTP request ke bahar chalta hai
+    BACKGROUND WORKER (SYNC)
+    ✔ Render compatible
+    ✔ Beginner friendly
+    ✔ Job progress enabled
     """
 
+    # ✅ Ensure directories exist
     ensure_dirs(
         settings.AUDIO_DIR,
         settings.VISUAL_DIR,
@@ -21,37 +25,57 @@ async def process_reel(job_id: str, idea: str, seconds: int):
         settings.VIDEO_DIR
     )
 
-    # 1️⃣ Script
-    script = generate_script(idea, seconds)
+    try:
+        # 1️⃣ Script
+        update_job(job_path, status="processing", step="generating_script", progress=10)
+        script = generate_script(idea, seconds)
 
-    # 2️⃣ Visuals
-    visuals = generate_visuals(
-        script,
-        max(1, seconds // 3),
-        settings.VISUAL_DIR
-    )
+        # 2️⃣ Visuals
+        update_job(job_path, step="generating_visuals", progress=30)
+        visuals = generate_visuals(
+            script,
+            max(1, seconds // 3),
+            settings.VISUAL_DIR
+        )
 
-    # 3️⃣ Voice
-    audio_path = await generate_voice(script, settings.AUDIO_DIR)
+        # 3️⃣ Voice
+        update_job(job_path, step="generating_voice", progress=50)
+        audio_path = generate_voice_sync(
+            script,
+            settings.AUDIO_DIR
+        )
 
-    # 4️⃣ Subtitles
-    subtitles = generate_subtitles(
-        script,
-        seconds,
-        settings.SUBTITLE_DIR
-    )
+        # 4️⃣ Subtitles
+        update_job(job_path, step="generating_subtitles", progress=70)
+        subtitles = generate_subtitles(
+            script,
+            seconds,
+            settings.SUBTITLE_DIR
+        )
 
-    # 5️⃣ Final video
-    video_name = unique_filename("final", "mp4")
-    video_path = os.path.join(settings.VIDEO_DIR, video_name)
+        # 5️⃣ Final Video
+        update_job(job_path, step="rendering_video", progress=90)
+        video_path = generate_video(
+            visuals,
+            audio_path,
+            settings.VIDEO_DIR,
+            seconds
+        )
 
-    generate_video(
-        visuals,
-        audio_path,
-        video_path,
-        seconds
-    )
+        # ✅ Completed
+        update_job(
+            job_path,
+            status="completed",
+            step="done",
+            progress=100,
+            video=video_path,
+            subtitles=subtitles
+        )
 
-    # NOTE:
-    # Abhi hum file me status save nahi kar rahe
-    # Wo STEP 2 me aayega
+    except Exception as e:
+        update_job(
+            job_path,
+            status="failed",
+            step="error",
+            error=str(e)
+        )
