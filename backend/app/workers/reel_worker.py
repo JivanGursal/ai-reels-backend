@@ -1,4 +1,3 @@
-import os
 from app.services.script_service import generate_script
 from app.services.visual_service import generate_visuals
 from app.services.voice_service import generate_voice_sync
@@ -17,7 +16,6 @@ def run_reel_job(job_path: str, idea: str, seconds: int):
     ✔ Job progress enabled
     """
 
-    # ✅ Ensure directories exist
     ensure_dirs(
         settings.AUDIO_DIR,
         settings.VISUAL_DIR,
@@ -40,29 +38,20 @@ def run_reel_job(job_path: str, idea: str, seconds: int):
 
         # 3️⃣ Voice
         update_job(job_path, step="generating_voice", progress=50)
-        audio_path = generate_voice_sync(
-            script,
-            settings.AUDIO_DIR
-        )
+        audio_path = generate_voice_sync(script, settings.AUDIO_DIR)
 
         # 4️⃣ Subtitles
         update_job(job_path, step="generating_subtitles", progress=70)
-        subtitles = generate_subtitles(
-            script,
-            seconds,
-            settings.SUBTITLE_DIR
-        )
+        subtitles = generate_subtitles(script, seconds, settings.SUBTITLE_DIR)
 
         # 5️⃣ Final Video
         update_job(job_path, step="rendering_video", progress=90)
         video_path = generate_video(
             visuals,
             audio_path,
-            settings.VIDEO_DIR,
-            seconds
+            settings.VIDEO_DIR
         )
 
-        # ✅ Completed
         update_job(
             job_path,
             status="completed",

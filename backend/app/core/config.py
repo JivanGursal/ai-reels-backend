@@ -3,17 +3,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Settings:
     APP_NAME = "AI Reels Generator"
     VERSION = "1.0.0"
 
-    OUTPUT_DIR = "backend/output"
-    AUDIO_DIR = f"{OUTPUT_DIR}/audio"
-    VISUAL_DIR = f"{OUTPUT_DIR}/visuals"
-    SUBTITLE_DIR = f"{OUTPUT_DIR}/subtitles"
-    VIDEO_DIR = f"{OUTPUT_DIR}/videos"
+    # ✅ ONE ROOT STORAGE
+    STORAGE_DIR = "storage"
 
-    # Visual AI (FREE / local first)
-    SD_API_URL = os.getenv("SD_API_URL", "")  # optional future use
+    AUDIO_DIR = f"{STORAGE_DIR}/audio"
+    VISUAL_DIR = f"{STORAGE_DIR}/visuals"
+    SUBTITLE_DIR = f"{STORAGE_DIR}/subtitles"
+    VIDEO_DIR = f"{STORAGE_DIR}/videos"
+    JOBS_DIR = f"{STORAGE_DIR}/jobs"
+
+    # Visual AI (future / optional)
+    SD_API_URL = os.getenv("SD_API_URL", "")
+
 
 settings = Settings()

@@ -1,27 +1,44 @@
-from groq import Groq
 import os
+from groq import Groq
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+def generate_script(idea: str, seconds: int) -> str:
+    """
+    Generates a cinematic motivational script using Groq LLM.
+    SAFE for Render + background workers.
+    """
 
-def generate_script(idea: str, seconds: int):
+    if not idea or seconds <= 0:
+        return "Stay focused. Discipline creates success."
+
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
     prompt = f"""
-Create a short motivational video script.
+You are a professional motivational video script writer.
 
-Topic: {idea}
-Duration: {seconds} seconds
+Create a powerful, cinematic script for a short video.
 
-Return:
-- Scene-wise narration
-- Each scene 1–2 lines
-- Powerful, cinematic tone
+Topic: "{idea}"
+Total Duration: {seconds} seconds
+
+Rules:
+- Divide into clear scenes
+- Each scene: 1–2 short impactful lines
+- No markdown
+- No titles
+- Only narration text
+- Motivational, bold, emotional tone
 """
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.7
-    )
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
 
-    return response.choices[0].message.content
+        script = response.choices[0].message.content.strip()
+        return script or "Discipline today builds freedom tomorrow."
+
+    except Exception as e:
+        # Render / worker safe fallback
+        return "Greatness is built one disciplined step at a time."

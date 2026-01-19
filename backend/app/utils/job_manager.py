@@ -1,3 +1,5 @@
+# app/utils/job_manager.py
+
 import json
 import os
 from datetime import datetime
@@ -9,21 +11,24 @@ def create_job(job_path):
         "progress": 0,
         "video": None,
         "error": None,
-        "updated_at": datetime.utcnow().isoformat()
+        "created_at": datetime.utcnow().isoformat()
     }
-    save_job(job_path, data)
+    _save(job_path, data)
 
 def update_job(job_path, **kwargs):
-    data = load_job(job_path)
+    data = _load(job_path)
     data.update(kwargs)
-    data["updated_at"] = datetime.utcnow().isoformat()
-    save_job(job_path, data)
+    _save(job_path, data)
 
-def load_job(job_path):
-    with open(job_path, "r") as f:
-        return json.load(f)
+def read_job(job_path):
+    if not os.path.exists(job_path):
+        return None
+    return _load(job_path)
 
-def save_job(job_path, data):
-    os.makedirs(os.path.dirname(job_path), exist_ok=True)
-    with open(job_path, "w") as f:
+def _save(path, data):
+    with open(path, "w") as f:
         json.dump(data, f, indent=2)
+
+def _load(path):
+    with open(path) as f:
+        return json.load(f)

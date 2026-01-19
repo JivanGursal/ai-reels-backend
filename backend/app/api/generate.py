@@ -1,28 +1,35 @@
-from fastapi import APIRouter
-import asyncio
-from app.workers.reel_worker import process_reel
-from app.utils.files import unique_filename
+# app/api/generate.py
+
+from fastapi import APIRouter, BackgroundTasks
+from app.core.config import settings
+from app.utils.files import ensure_dirs, unique_filename
+from app.utils.job_manager import create_job
+from app.worker.reel_worker import run_reel_job
+import os
 
 router = APIRouter()
 
-
 @router.post("/generate")
-async def generate_reel(idea: str, seconds: int = 10):
-    """
-    SAFE ENDPOINT
-    ✔️ Sirf job start karega
-    ✔️ Heavy kaam background me
-    """
+def generate_reel(
+    idea: str,
+    seconds: int = 10,
+    background_tasks: BackgroundTasks = None
+):
+    ensure_dirs(settings.JOBS_DIR)
 
-    job_id = unique_filename("job", "txt")
+    job_id = unique_filename("job", "json")
+    job_path = os.path.join(settings.JOBS_DIR, job_id)
 
-    # Background task start
-    asyncio.create_task(
-        process_reel(job_id, idea, seconds)
+    create_job(job_path)
+
+    background_tasks.add_task(
+        run_reel_job,
+        job_path,
+        idea,
+        seconds
     )
 
     return {
-        "status": "started",
         "job_id": job_id,
-        "message": "Reel generation started in background"
+        "status": "queued"
     }
