@@ -1,34 +1,42 @@
-# app/utils/job_manager.py
-
 import json
 import os
+import uuid
 from datetime import datetime
 
-def create_job(job_path):
+def create_job(job_path: str):
+    # ✅ ensure jobs directory exists
+    os.makedirs(os.path.dirname(job_path), exist_ok=True)
+
+    job_id = os.path.splitext(os.path.basename(job_path))[0]
+
     data = {
+        "id": job_id,
         "status": "queued",
-        "step": "waiting",
+        "created_at": datetime.utcnow().isoformat(),
         "progress": 0,
-        "video": None,
         "error": None,
-        "created_at": datetime.utcnow().isoformat()
+        "result": None
     }
-    _save(job_path, data)
 
-def update_job(job_path, **kwargs):
-    data = _load(job_path)
-    data.update(kwargs)
     _save(job_path, data)
+    return data
 
-def read_job(job_path):
+
+def read_job(job_path: str):
     if not os.path.exists(job_path):
         return None
-    return _load(job_path)
+    with open(job_path, "r") as f:
+        return json.load(f)
 
-def _save(path, data):
+
+def update_job(job_path: str, **updates):
+    job = read_job(job_path)
+    if not job:
+        return
+    job.update(updates)
+    _save(job_path, job)
+
+
+def _save(path: str, data: dict):
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
-
-def _load(path):
-    with open(path) as f:
-        return json.load(f)
