@@ -1,10 +1,7 @@
-# app/api/generate.py
-
 from fastapi import APIRouter, BackgroundTasks
 from app.core.config import settings
-from app.utils.files import ensure_dirs, unique_filename
 from app.utils.job_manager import create_job
-from app.worker.reel_worker import run_reel_job
+from app.workers.reel_worker import run_reel_job
 import os
 
 router = APIRouter()
@@ -15,13 +12,11 @@ def generate_reel(
     seconds: int = 10,
     background_tasks: BackgroundTasks = None
 ):
-    ensure_dirs(settings.JOBS_DIR)
+    # 1️⃣ Create Job
+    job = create_job()
+    job_path = os.path.join(settings.JOBS_DIR, f"{job['id']}.json")
 
-    job_id = unique_filename("job", "json")
-    job_path = os.path.join(settings.JOBS_DIR, job_id)
-
-    create_job(job_path)
-
+    # 2️⃣ Run worker in background
     background_tasks.add_task(
         run_reel_job,
         job_path,
@@ -29,7 +24,8 @@ def generate_reel(
         seconds
     )
 
+    # 3️⃣ Immediate response (NO BLOCKING)
     return {
-        "job_id": job_id,
-        "status": "queued"
+        "status": "accepted",
+        "job_id": job["id"]
     }

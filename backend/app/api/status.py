@@ -7,10 +7,13 @@ router = APIRouter()
 
 @router.get("/status/{job_id}")
 def job_status(job_id: str):
-    job_path = os.path.join(settings.JOBS_DIR, job_id)
+    job_path = os.path.join(
+        settings.JOBS_DIR,
+        f"{job_id}.json"
+    )
 
     job = read_job(job_path)
     if not job:
-        raise HTTPException(404, "Job not found")
+        raise HTTPException(status_code=404, detail="Job not found")
 
     return job

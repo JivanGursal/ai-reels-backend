@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from app.api.generate import router
-from app.core.logger import get_logger
+from app.api.generate import router as generate_router
 from app.api.status import router as status_router
+from app.core.logger import get_logger
 
 logger = get_logger()
 
@@ -10,11 +10,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-app.include_router(router)
+# 🔹 Routers
+app.include_router(generate_router)
+app.include_router(status_router)
 
+# 🔹 Health check
 @app.get("/")
 def health():
     return {"status": "running"}
-
-
-app.include_router(status_router)
