@@ -1,70 +1,39 @@
-from app.services.script_service import generate_script
-from app.services.visual_service import generate_visuals
-from app.services.voice_service import generate_voice_sync
-from app.services.subtitle_service import generate_subtitles
+from app.services.groq_service import generate_script
+from app.services.elevenlabs_service import generate_voice
+from app.services.replicate_image import generate_images
 from app.services.video_service import generate_video
+from app.utils.job_manager import update_job
 from app.core.config import settings
 from app.utils.files import ensure_dirs
-from app.utils.job_manager import update_job
 
-
-def run_reel_job(job_path: str, idea: str, seconds: int):
-    """
-    BACKGROUND WORKER (SYNC)
-    ✔ Render compatible
-    ✔ Beginner friendly
-    ✔ Job progress enabled
-    """
-
+def run_reel_job(job_path, topic, language, mode, seconds):
     ensure_dirs(
         settings.AUDIO_DIR,
         settings.VISUAL_DIR,
-        settings.SUBTITLE_DIR,
         settings.VIDEO_DIR
     )
 
     try:
-        # 1️⃣ Script
-        update_job(job_path, status="processing", step="generating_script", progress=10)
-        script = generate_script(idea, seconds)
+        update_job(job_path, status="processing", step="script", progress=10)
 
-        # 2️⃣ Visuals
-        update_job(job_path, step="generating_visuals", progress=30)
-        visuals = generate_visuals(
-            script,
-            max(1, seconds // 3),
-            settings.VISUAL_DIR
-        )
+        script = generate_script(topic, seconds, language)
+        scenes = [s.strip() for s in script.split("\n") if s.strip()]
 
-        # 3️⃣ Voice
-        update_job(job_path, step="generating_voice", progress=50)
-        audio_path = generate_voice_sync(script, settings.AUDIO_DIR)
+        update_job(job_path, step="visuals", progress=40)
+        visuals = generate_images(scenes)
 
-        # 4️⃣ Subtitles
-        update_job(job_path, step="generating_subtitles", progress=70)
-        subtitles = generate_subtitles(script, seconds, settings.SUBTITLE_DIR)
+        update_job(job_path, step="voice", progress=60)
+        audio = generate_voice(script, language)
 
-        # 5️⃣ Final Video
-        update_job(job_path, step="rendering_video", progress=90)
-        video_path = generate_video(
-            visuals,
-            audio_path,
-            settings.VIDEO_DIR
-        )
+        update_job(job_path, step="rendering", progress=90)
+        video = generate_video(visuals, audio, settings.VIDEO_DIR, seconds)
 
         update_job(
             job_path,
             status="completed",
-            step="done",
             progress=100,
-            video=video_path,
-            subtitles=subtitles
+            result={"video": video}
         )
 
     except Exception as e:
-        update_job(
-            job_path,
-            status="failed",
-            step="error",
-            error=str(e)
-        )
+        update_job(job_path, status="failed", error=str(e))
