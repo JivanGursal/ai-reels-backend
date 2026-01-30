@@ -1,19 +1,34 @@
-import os, replicate, uuid
-from app.core.config import settings
+import os
+import replicate
+from app.utils.files import unique_filename
 
-replicate.Client(api_token=settings.REPLICATE_API_TOKEN)
+replicate.Client(api_token=os.getenv("REPLICATE_API_TOKEN"))
 
-def generate_images(prompts: list[str]) -> list[str]:
+
+def generate_images(script: str, count: int, output_dir: str) -> list[str]:
+    os.makedirs(output_dir, exist_ok=True)
     images = []
 
-    for p in prompts:
-        output = replicate.run(
-            "stability-ai/sdxl",
-            input={"prompt": p}
-        )
-        path = f"{settings.VISUAL_DIR}/{uuid.uuid4().hex}.png"
+    prompt = f"Cinematic motivational visuals. {script}"
+
+    output = replicate.run(
+        "stability-ai/sdxl",
+        input={
+            "prompt": prompt,
+            "num_outputs": count,
+            "aspect_ratio": "9:16"
+        }
+    )
+
+    for img_url in output:
+        filename = unique_filename("scene", "png")
+        path = os.path.join(output_dir, filename)
+
+        import requests
+        img_data = requests.get(img_url).content
         with open(path, "wb") as f:
-            f.write(output[0])
+            f.write(img_data)
+
         images.append(path)
 
     return images

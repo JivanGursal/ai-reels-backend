@@ -1,29 +1,34 @@
 import os
-from pathlib import Path
 from app.utils.files import unique_filename
 
-def generate_subtitles(script: str, seconds: int, output_dir: str):
-    """
-    Generates simple SRT subtitles
-    """
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+def generate_subtitles(script: str, seconds: int, output_dir: str) -> str:
+    os.makedirs(output_dir, exist_ok=True)
 
     lines = [l.strip() for l in script.split("\n") if l.strip()]
-    duration = seconds / max(len(lines), 1)
+    duration = seconds / max(1, len(lines))
 
-    filename = unique_filename("subs", "srt")
+    srt = ""
+    t = 0.0
+
+    for i, line in enumerate(lines, 1):
+        start = _ts(t)
+        end = _ts(t + duration)
+        srt += f"{i}\n{start} --> {end}\n{line}\n\n"
+        t += duration
+
+    filename = unique_filename("subtitles", "srt")
     path = os.path.join(output_dir, filename)
 
     with open(path, "w", encoding="utf-8") as f:
-        current = 0.0
-        for i, line in enumerate(lines, start=1):
-            start = current
-            end = start + duration
-            f.write(f"{i}\n")
-            f.write(
-                f"00:00:{start:05.2f} --> 00:00:{end:05.2f}\n"
-            )
-            f.write(f"{line}\n\n")
-            current = end
+        f.write(srt)
 
     return path
+
+
+def _ts(sec):
+    h = int(sec // 3600)
+    m = int((sec % 3600) // 60)
+    s = int(sec % 60)
+    ms = int((sec - int(sec)) * 1000)
+    return f"{h:02}:{m:02}:{s:02},{ms:03}"

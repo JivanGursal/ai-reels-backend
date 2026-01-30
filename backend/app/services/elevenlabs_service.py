@@ -1,25 +1,48 @@
-import requests, uuid, os
-from app.core.config import settings
+import os
+import requests
+from app.utils.files import unique_filename
 
-def generate_voice(text: str, language: str):
+ELEVEN_URL = "https://api.elevenlabs.io/v1/text-to-speech"
+
+
+VOICE_MAP = {
+    "english": "Rachel",
+    "hindi": "Prem",
+    "marathi": "Prem",
+    "gujarati": "Prem",
+    "kannada": "Prem",
+    "tamil": "Prem",
+    "rajasthani": "Prem"
+}
+
+
+def generate_voice(text: str, language: str, output_dir: str) -> str:
+    os.makedirs(output_dir, exist_ok=True)
+
+    voice = VOICE_MAP.get(language, "Rachel")
+    filename = unique_filename("voice", "mp3")
+    path = os.path.join(output_dir, filename)
+
     headers = {
-        "xi-api-key": settings.ELEVENLABS_API_KEY,
+        "xi-api-key": os.getenv("ELEVENLABS_API_KEY"),
         "Content-Type": "application/json"
     }
 
     payload = {
         "text": text,
-        "voice_settings": {"stability": 0.4, "similarity_boost": 0.8}
+        "voice_settings": {
+            "stability": 0.6,
+            "similarity_boost": 0.8
+        }
     }
 
-    res = requests.post(
-        "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
-        headers=headers,
-        json=payload
+    r = requests.post(
+        f"{ELEVEN_URL}/{voice}",
+        json=payload,
+        headers=headers
     )
 
-    path = f"{settings.AUDIO_DIR}/voice_{uuid.uuid4().hex}.mp3"
     with open(path, "wb") as f:
-        f.write(res.content)
+        f.write(r.content)
 
     return path
